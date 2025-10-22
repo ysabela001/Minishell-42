@@ -1,163 +1,283 @@
 # 🐚 Minishell — 42 São Paulo
 
-**Minishell** é um pequeno interpretador de comandos (shell) implementado em **C** como parte da formação da 42.  
-Este repositório contém a implementação do shell, código-fonte em `src/`, uma versão local de `libft/` em `lib/libft` e os arquivos de build (Makefile).
+**Minishell** é um interpretador de comandos (shell) implementado em **C** como parte do currículo da 42 São Paulo. O projeto replica funcionalidades básicas de um shell POSIX, incluindo execução de comandos, pipes, redirecionamentos e builtins.
 
 ---
 
 ## 📌 Sumário
-- [Objetivo](#-objetivo-do-projeto)  
-- [Estrutura do repositório](#-estrutura-do-repositório)  
-- [Requisitos](#-requisitos)  
-- [Como compilar](#-como-compilar)  
-- [Como executar](#-como-executar)  
-- [Builtins & exemplos de uso](#-builtins--exemplos-de-uso)  
-- [Pipes, redirecionamentos e heredoc](#-pipes-redirecionamentos-e-heredoc)  
-- [Tratamento de sinais](#-tratamento-de-sinais)  
-- [Testes, valgrind e dicas de debug](#-testes-valgrind-e-dicas-de-debug)  
-- [Checklist do avaliador (42)](#-checklist-do-avaliador-42)  
-- [Próximos passos](#-próximos-passos)
+
+- [Objetivo do Projeto](#-objetivo-do-projeto)
+- [Estrutura do Repositório](#️-estrutura-do-repositório)
+- [Compilação](#️-compilação)
+- [Execução](#️-execução)
+- [Funcionalidades](#-funcionalidades)
+  - [Builtins](#builtins)
+  - [Pipes e Redirecionamentos](#pipes-e-redirecionamentos)
+  - [Tratamento de Sinais](#tratamento-de-sinais)
+- [Testes](#-testes)
+- [Checklist de Avaliação](#-checklist-de-avaliação)
+- [Próximos Passos](#-próximos-passos)
 
 ---
 
-## 🎯 Objetivo do projeto
+## 🎯 Objetivo do Projeto
 
-Construir um shell POSIX-like que:
+Desenvolver um shell minimalista POSIX-like com as seguintes características:
 
-- execute comandos externos usando `fork` + `execve`,  
-- trate pipes (`|`) e redirecionamentos (`>`, `<`, `>>`),  
-- implemente builtins (`echo`, `cd`, `pwd`, `export`, `unset`, `env`, `exit`),  
-- suporte `here-doc` (`<<`),  
-- gerencie sinais corretamente (SIGINT, EOF/Ctrl+D),  
-- mantenha comportamento consistente frente a erros.
+- Execução de comandos externos via `fork` + `execve`
+- Implementação de pipes (`|`) e redirecionamentos (`>`, `<`, `>>`)
+- Suporte a here-doc (`<<`)
+- Builtins: `echo`, `cd`, `pwd`, `export`, `unset`, `env`, `exit`
+- Gerenciamento correto de sinais (SIGINT, EOF)
+- Expansão de variáveis de ambiente
+- Tratamento robusto de erros
 
 ---
 
-## 🗂️ Estrutura do repositório
+## 🗂️ Estrutura do Repositório
 
-```text
-/
-├── lib/
-│   └── libft/         # biblioteca local (funções utilitárias)
-├── src/               # código-fonte do minishell
-├── Makefile           # regras de build
-├── README.md          # (este arquivo)
-└── readline.supp      # arquivo de suporte para testes de readline
 ```
-Dentro de src/ estão os arquivos .c e .h do projeto (parser, executor, builtins, utils).
+.
+├── lib/
+│   └── libft/          # Biblioteca de funções auxiliares
+├── src/                # Código-fonte do minishell
+│   ├── parser/         # Análise léxica e sintática
+│   ├── executor/       # Execução de comandos
+│   ├── builtins/       # Implementação dos builtins
+│   └── utils/          # Funções utilitárias
+├── Makefile            # Regras de compilação
+├── README.md           # Documentação do projeto
+└── readline.supp       # Supressões para testes com Valgrind
+```
+
 ---
 
-🛠️ Como compilar
+## ⚙️ Compilação
 
-Recomendado: usar o Makefile fornecido.
+Na raiz do repositório, execute:
 
-# na raiz do repositório
+```bash
 make
+```
 
-Comandos úteis do Makefile (padrão esperado):
+### Comandos disponíveis
 
-make          # build
-make clean    # remove .o
-make fclean   # remove .o e binário
-make re       # fclean + make
+| Comando       | Descrição                                    |
+|---------------|----------------------------------------------|
+| `make`        | Compila o projeto                            |
+| `make clean`  | Remove arquivos objeto (`.o`)                |
+| `make fclean` | Remove arquivos objeto e o executável        |
+| `make re`     | Recompila o projeto do zero (`fclean + make`)|
+
 ---
 
-▶️ Como executar
+## ▶️ Execução
+
+Após a compilação, execute o shell:
+
+```bash
 ./minishell
----
-##Comandos##
+```
 
-Você verá um prompt personalizado (ex.: minishell$). Digite comandos como em um shell normal:
+Você verá um prompt interativo onde poderá digitar comandos:
 
-$ ls -la
-$ echo Hello World
-$ cd /tmp
-$ pwd
-$ export TEST=ok
-$ echo $TEST
-$ exit
+```bash
+minishell$ ls -la
+minishell$ echo "Hello, World!"
+minishell$ exit
+```
+
 ---
 
-🔧 Builtins — exemplos
+## 🔧 Funcionalidades
 
-echo [-n] [args...]
+### Builtins
 
-echo hello world
-echo -n "no newline"
+O Minishell implementa os seguintes comandos internos:
 
+#### `echo`
+Imprime argumentos na saída padrão.
 
-cd [dir]
+```bash
+minishell$ echo Hello World
+Hello World
 
-cd /path/to/dir
-cd  # volta ao HOME
+minishell$ echo -n "sem quebra de linha"
+sem quebra de linha$
+```
 
-pwd
+#### `cd`
+Altera o diretório de trabalho atual.
 
-export VAR=valor / unset VAR
-export MYVAR=42
-echo $MYVAR
-unset MYVAR
+```bash
+minishell$ cd /tmp
+minishell$ cd          # retorna para $HOME
+minishell$ cd ..       # sobe um diretório
+```
 
-env — mostra variáveis de ambiente
+#### `pwd`
+Exibe o diretório de trabalho atual.
 
-exit [status] — encerra o shell
+```bash
+minishell$ pwd
+/home/user/minishell
+```
+
+#### `export`
+Define ou exibe variáveis de ambiente.
+
+```bash
+minishell$ export VAR=valor
+minishell$ echo $VAR
+valor
+```
+
+#### `unset`
+Remove variáveis de ambiente.
+
+```bash
+minishell$ unset VAR
+```
+
+#### `env`
+Lista todas as variáveis de ambiente.
+
+```bash
+minishell$ env
+```
+
+#### `exit`
+Encerra o shell com status opcional.
+
+```bash
+minishell$ exit
+minishell$ exit 42
+```
+
 ---
 
-⛓ Pipes, redirecionamentos e heredoc — exemplos
+### Pipes e Redirecionamentos
 
-Pipe:
+#### Pipe (`|`)
+Encadeia a saída de um comando na entrada de outro.
 
-ls -la | grep minishell
+```bash
+minishell$ ls -la | grep minishell
+minishell$ cat file.txt | wc -l
+```
 
+#### Redirecionamento de Saída (`>`, `>>`)
 
-Redirecionamento de saída:
+```bash
+minishell$ echo "texto" > arquivo.txt      # sobrescreve
+minishell$ echo "mais texto" >> arquivo.txt # append
+```
 
-echo "texto" > arquivo.txt
+#### Redirecionamento de Entrada (`<`)
 
+```bash
+minishell$ wc -l < arquivo.txt
+```
 
-Append:
+#### Here-doc (`<<`)
+Lê entrada até encontrar um delimitador.
 
-echo "mais" >> arquivo.txt
+```bash
+minishell$ cat << EOF
+> linha 1
+> linha 2
+> EOF
+linha 1
+linha 2
+```
 
-
-Redirecionamento de entrada:
-
-wc -l < arquivo.txt
-
-
-Here-doc:
-
-cat << EOF
-linha1
-linha2
-EOF
 ---
 
-🔔 Tratamento de sinais
+### Tratamento de Sinais
 
-Ctrl+C (SIGINT): interrompe processo em foreground, mas não deve terminar o shell. O prompt deve reaparecer.
+| Sinal          | Comportamento                                                |
+|----------------|--------------------------------------------------------------|
+| **Ctrl+C**     | Interrompe processo em foreground, exibe novo prompt         |
+| **Ctrl+D**     | Envia EOF; em prompt vazio, encerra o shell                  |
+| **Ctrl+\\**    | Ignorado (não deve terminar o shell)                         |
 
-Ctrl+D: quando digitado em prompt vazio, deve encerrar o shell (exit). Em outros contextos, enviado como EOF para o programa em foreground.
-
-Teste interações de sinais com processos em foreground e com builtins.
 ---
 
-🧪 Testes, Valgrind & Debug
+## 🧪 Testes
 
-Valgrind (Linux/WSL/macOS via brew):
+### Valgrind
 
-valgrind --leak-check=full --show-leak-kinds=all ./minishell
----
+Para verificar vazamentos de memória:
 
-Debug básico:
+```bash
+valgrind --leak-check=full --show-leak-kinds=all \
+         --suppressions=readline.supp ./minishell
+```
 
-printf dentro do código para entender fluxo
 
-gdb para depuração passo-a-passo
----
+### Testes Automatizados
 
-Testes automatizados:
+Utilize o script de testes fornecido:
 
-Pode-se usar readline.supp (já presente no repo) para rodar casos de teste automatizados com o binário. Exemplo:
-
+```bash
 bash readline.supp ./minishell
+```
+
+### Casos de Teste Sugeridos
+
+- Comandos simples: `ls`, `cat`, `echo`
+- Pipes múltiplos: `ls | grep c | wc -l`
+- Redirecionamentos combinados: `< in.txt cat | grep word > out.txt`
+- Variáveis: `export X=1; echo $X$X`
+- Aspas: `echo "teste com $VAR"` vs `echo 'teste com $VAR'`
+- Sinais: testar Ctrl+C durante execução de comandos
+
+---
+
+## ✅ Checklist de Avaliação
+
+### Compilação
+- [ ] `make` compila sem erros
+- [ ] `make clean` remove objetos
+- [ ] `make fclean` remove tudo
+- [ ] `make re` recompila corretamente
+
+### Funcionalidades Básicas
+- [ ] Prompt é exibido corretamente
+- [ ] Comandos simples funcionam (`ls`, `cat`, etc.)
+- [ ] Histórico de comandos funciona (↑/↓)
+
+### Builtins
+- [ ] `echo` com e sem `-n`
+- [ ] `cd` com caminhos relativos e absolutos
+- [ ] `pwd` exibe caminho correto
+- [ ] `export` e `unset` gerenciam variáveis
+- [ ] `env` lista variáveis
+- [ ] `exit` com e sem código de status
+
+### Pipes e Redirecionamentos
+- [ ] Pipes simples e múltiplos
+- [ ] `>`, `>>`, `<` funcionam corretamente
+- [ ] Here-doc (`<<`) funciona
+
+### Sinais
+- [ ] Ctrl+C não termina o shell
+- [ ] Ctrl+D encerra corretamente
+- [ ] Sinais em processos filho são tratados
+
+### Qualidade do Código
+- [ ] Sem memory leaks (Valgrind)
+- [ ] Código segue norminette (se aplicável)
+- [ ] Tratamento adequado de erros
+
+---
+
+## 👥 Autores
+
+Desenvolvido como parte do currículo da **42 São Paulo** pela Ysabela Tavares.
+
+---
+
+## 📄 Licença
+
+Este projeto é desenvolvido para fins educacionais na 42 São Paulo.
