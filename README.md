@@ -16,7 +16,6 @@
   - [Tratamento de Sinais](#tratamento-de-sinais)
 - [Testes](#-testes)
 - [Checklist de Avaliação](#-checklist-de-avaliação)
-- [Próximos Passos](#-próximos-passos)
 
 ---
 
